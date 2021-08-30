@@ -1,0 +1,5 @@
+BasedOnStyle: Google
+AllowShortLambdasOnASingleLine: All
+ColumnLimit: 100
+UseTab: Never
+AllowShortFunctionsOnASingleLine: None
