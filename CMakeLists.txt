@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(sdata
-  DESCRIPTION "sdata is a marking language primarly used for C++ data structures serialization and deserialization."
+  DESCRIPTION "sdata is a marking language used for C++ data structures serialization and deserialization."
   LANGUAGES CXX)
 
 # Project build customization
