@@ -1,167 +1,186 @@
-#ifndef REGEX_AUTOMATA_HPP
-#define REGEX_AUTOMATA_HPP
+#ifndef SDATA_REGEX_AUTOMATA_HPP
+#define SDATA_REGEX_AUTOMATA_HPP
 
-#include <algorithm>
 #include <iostream>
-#include <limits>
 #include <map>
+#include <set>
+#include <string>
 #include <string_view>
-#include <unordered_set>
-#include <vector>
 
 namespace sdata {
 
-using RegexNode = size_t;
+template <typename char_t>
+struct RegexNode {
+  char_t state;
+  std::set<size_t> edges;
+};
 
 template <typename char_t>
 class RegexAutomata {
-  using string_view_t = std::basic_string_view<char_t>;
-
  public:
   static constexpr char_t EPSILON = 0x0;
   static constexpr char_t ANY = 0x1;
 
-  RegexAutomata() {
-  }
-
-  RegexAutomata<char_t> merge(RegexAutomata<char_t>& automata,
-                              std::unordered_set<RegexNode> ancestors) {
-    RegexAutomata<char_t> rebased{};
-    const RegexNode base = node_count();
-
-    for (const auto& [node, state] : automata.m_states) {
-      rebased.m_states[base + node] = state;
-    }
-
-    for (const auto& [node, edges] : automata.m_transitions) {
-      auto& node_edges = rebased.m_transitions[base + node];
-
-      for (RegexNode edge : edges) {
-        node_edges.insert(base + edge);
-      }
-    }
-
-    for (RegexNode ancestor : ancestors) {
-      m_transitions[ancestor].insert(base);
-    }
-
-    m_states.merge(rebased.m_states);
-    m_transitions.merge(rebased.m_transitions);
-
-    return rebased;
-  }
-
-  inline RegexNode node_count() const {
-    return m_states.empty() ? 0 : m_states.end()->first;
-  }
-
   inline bool empty() const {
-    return node_count() <= 0;
+    return m_nodes.empty();
   }
 
-  inline const char_t& node_state(RegexNode node) const {
-    return m_states.at(node);
-  }
+  size_t node_create(const char_t &state, const std::set<size_t> &&ancestors,
+                     const std::set<size_t> &&edges) {
+    size_t id = node_new_id();
 
-  inline const std::unordered_set<RegexNode>& node_edges(RegexNode node) const {
-    return m_transitions.at(node);
-  }
+    m_nodes[id] = {state, edges};
 
-  RegexNode node_create(const char_t& state, std::unordered_set<RegexNode>&& ancestors,
-                        std::unordered_set<RegexNode>&& edges) {
-    const RegexNode node = node_count();
-
-    m_states[node] = state;
-    m_transitions[node] = edges;
-
-    for (RegexNode ancestor : ancestors) {
-      node_connect(ancestor, {node});
+    for (size_t ancestor_id : ancestors) {
+      node_connect(ancestor_id, id);
     }
 
-    return node;
+    return id;
   }
 
-  inline void node_connect(RegexNode node, std::unordered_set<RegexNode>&& edges) {
-    m_transitions[node].merge(edges);
+  inline void node_connect(size_t id, size_t edge) {
+    m_nodes[id].edges.insert(edge);
   }
 
-  bool node_is_leaf(RegexNode node) const {
-    const auto& edges = m_transitions.at(node);
-    return edges.empty() || *std::max_element(edges.begin(), edges.end()) < node;
+  bool node_is_leaf(size_t id) const {
+    const auto &edges = m_nodes.at(id).edges;
+    return edges.empty() || *std::max_element(edges.begin(), edges.end()) < id;
   }
 
-  std::unordered_set<RegexNode> leafs() const {
-    std::unordered_set<RegexNode> leafs{};
-
-    for (const auto& [node, _] : m_transitions) {
-      if (node_is_leaf(node)) leafs.emplace(node);
+  std::set<size_t> node_leaves(size_t id = 0) const {
+    if (node_is_leaf(id)) {
+      return {id};
     }
 
-    return leafs;
-  }
+    const RegexNode<char_t> &node = m_nodes.at(id);
+    std::set<size_t> leaves;
 
-  // Runs the automata until the input reached the end or until all paths have been explored
-  // Returns [accepted, output]
-  template <typename Iterator>
-  std::pair<bool, const Iterator> run(Iterator input, const Iterator end,
-                                      RegexNode node = 0) const {
-    if (node_is_leaf(node)) {
-      return {true, input};
+    for (size_t edge_id : node.edges) {
+      if (edge_id > id) leaves.merge(node_leaves(edge_id));
     }
 
-    if (node_state(node) == EPSILON || node_state(node) == ANY || node_state(node) == *input) {
-      // Epsilon state doesn't consume input
-      Iterator edge_input = node_state(node) != EPSILON ? input + 1 : input;
+    return leaves;
+  }
 
-      for (RegexNode edge : m_transitions.at(node)) {
-        auto [edge_accepted, edge_output] = run(edge_input, end, edge);
+  /**
+     Runs the automata until the input reached the end or until all paths are explored
+     Returns are pair containing [matched, output]
+   */
+  template <typename iterator_t>
+  std::pair<bool, iterator_t> run(iterator_t input, const iterator_t end, size_t id = 0) const {
+    const RegexNode<char_t> &node = m_nodes.at(id);
 
-        if (edge_accepted) {
-          return {true, edge_output};  // Path available, we return the success
+    if (node.state == EPSILON || node.state == ANY || (input != end && node.state == *input)) {
+      // Epsilon state does not consume the input
+      iterator_t edge_input = node.state != EPSILON ? input + 1 : input;
+
+      for (size_t edge_id : node.edges) {
+        if (auto [edge_matched, edge_output] = run(edge_input, end, edge_id); edge_matched) {
+          // Path available in edges, we accept the input
+          return std::make_pair(true, edge_output);
         }
       }
+
+      // ANY node can't be an accepting state
+      if (node.state != ANY && node_is_leaf(id)) {
+        // Automata reached the end, we accept the input
+        return std::make_pair(true, edge_input);
+      }
     }
 
-    // No path available
-    return {false, input};
+    // No path available, we reject the input
+    return std::make_pair(false, input);
   }
 
-  // Translate the regex graph into graphviz code
-  std::ostream& graphviz(std::ostream& os, RegexNode node = 0) const {
-    const auto graphviz_state = [this](RegexNode node) -> char {
-      char_t state = m_states.at(node);
-      return state != EPSILON ? state : '$';
-    };
+  /**
+     Merges an automata inside this one
+     Connects the ancestors to the automata's root
+     Returns the id of the merged automata's root
+   */
+  size_t merge(const RegexAutomata<char_t> &automata, const std::set<size_t> &&ancestors) {
+    std::map<size_t, RegexNode<char_t>> merged;
+    const size_t root_id = node_new_id();
 
-    if (node == 0) {
-      os << "rankdir=\"LR\";" << std::endl;
-      os << "start [shape = box];" << std::endl;
-      os << "start -> 0 [label = \"" << graphviz_state(node) << "\"];" << std::endl;
+    for (const auto &[id, node] : automata.m_nodes) {
+      RegexNode<char_t> merged_node{node.state};
+
+      for (size_t edge_id : node.edges) {
+        merged_node.edges.insert(root_id + edge_id);
+      }
+
+      merged[root_id + id] = merged_node;
     }
 
-    std::string shape = node_is_leaf(node) ? "doublecircle" : "circle";
-    os << node << " [shape = " << shape << "];" << std::endl;
-
-    for (RegexNode edge : node_edges(node)) {
-      char state = graphviz_state(edge);
-
-      os << node << " -> " << edge << " [label = \"" << state << "\"];" << std::endl;
-
-      // Avoid infinite recursion by reparsing nodes (loop case)
-      if (edge > node) graphviz(os, edge);
+    for (size_t ancestor_id : ancestors) {
+      node_connect(ancestor_id, {root_id});
     }
+
+    m_nodes.merge(merged);
+    return root_id;
+  }
+
+  std::ostream &stream_graphviz(std::ostream &os) const {
+    os << "digraph regex_automata {\n";
+    if (!empty()) {
+      stream_graphviz_start(os);
+      stream_graphviz_shapes(os);
+      stream_graphviz_edges(os);
+    }
+    os << "}";
 
     return os;
   }
 
  private:
-  std::map<RegexNode, char_t> m_states;
-  std::map<RegexNode, std::unordered_set<RegexNode>> m_transitions;
+  std::string graphviz_state(const RegexNode<char_t> &node) const {
+    if (node.state == EPSILON) return "EPS";
+    if (node.state == ANY) return "ANY";
+    if (node.state == '"') return "\\\"";
+    if (node.state >= 0x20 && node.state <= 0x7E) return {(char)node.state};
+
+    return "???";
+  }
+
+  std::ostream &stream_graphviz_start(std::ostream &os) const {
+    const RegexNode<char_t> &root_node = m_nodes.at(0);
+
+    os << "rankdir=\"LR\";\n";
+    os << "start [shape = box];\n";
+    os << "start -> 0 [label = \"" << graphviz_state(root_node) << "\"];\n";
+
+    return os;
+  }
+
+  std::ostream &stream_graphviz_shapes(std::ostream &os) const {
+    for (const auto &[id, node] : m_nodes) {
+      std::string shape = node_is_leaf(id) ? "doublecircle" : "circle";
+      os << id << " [shape = " << shape << "];\n";
+    }
+
+    return os;
+  }
+
+  std::ostream &stream_graphviz_edges(std::ostream &os, size_t id = 0) const {
+    for (const auto &[id, node] : m_nodes) {
+      for (size_t edge_id : node.edges) {
+        const auto &edge = m_nodes.at(edge_id);
+        os << id << " -> " << edge_id << " [label = \"" << graphviz_state(edge) << "\"];\n";
+      }
+    }
+
+    return os;
+  }
+
+  inline size_t node_new_id() const {
+    return !m_nodes.empty() ? m_nodes.cend()->first : 0;
+  }
+
+  std::map<size_t, RegexNode<char_t>> m_nodes;
 };
 
 template <typename char_t>
-std::ostream& operator<<(std::ostream& os, const RegexAutomata<char_t>& automata) {
-  return automata.graphviz(os);
+std::ostream &operator<<(std::ostream &os, const RegexAutomata<char_t> &automata) {
+  return automata.stream_graphviz(os);
 }
 
 }  // namespace sdata
