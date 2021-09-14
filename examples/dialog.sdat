@@ -3,8 +3,8 @@
 		title = "GAME OVER",
   	play_again_prompt = "Play again ?",
   	play_again_accept = "Yes",
-  	play_again_refuse = "No",
-  },
+  	play_again_refuse = "No"
+  }
 },
 
 @fr_FR {
@@ -12,8 +12,8 @@
 		title = "Partie terminée",
   	play_again_prompt = "Souhaitez-vous rejouer ?",
   	play_again_accept = "Oui",
-  	play_again_refuse = "Non",
-  },
+  	play_again_refuse = "Non"
+  }
 },
 
 @es_ES {
@@ -21,8 +21,8 @@
 		title = "Juego terminado",
   	play_again_prompt = "Juega de nuevo ?",
   	play_again_accept = "Sí",
-  	play_again_refuse = "No",
-  },
+  	play_again_refuse = "No"
+  }
 },
 
 @zh_CN {
@@ -30,6 +30,6 @@
 		title = "游戏结束",
   	play_again_prompt = "再玩一次 ？",
   	play_again_accept = "是的",
-  	play_again_refuse = "不",
-  },
-},
+  	play_again_refuse = "不"
+  }
+}

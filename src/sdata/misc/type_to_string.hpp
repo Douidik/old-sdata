@@ -12,9 +12,9 @@ namespace sdata {
 
 template <typename T>
 std::string_view type_to_string() {
-  static std::string s_type_name;
+  static std::string s_type_name = "";
 
-  if (s_type_name.empty()) { // Type not already demangled
+  if (s_type_name.empty()) {  // Type not already demangled
     int status = -4;
     const char *mangled_type_name = typeid(T).name();
     char *buffer = abi::__cxa_demangle(mangled_type_name, nullptr, nullptr, &status);

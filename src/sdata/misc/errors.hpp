@@ -12,9 +12,6 @@ constexpr std::string_view REGEX_UNTERMINATED_LITERAL =
 constexpr std::string_view REGEX_UNTERMINATED_SUBSEQ =
     "Unterminated subsequence, missing '}' closing character";
 
-constexpr std::string_view REGEX_EMPTY_SUBSEQ =
-    "Empty subsequence";
-
 constexpr std::string_view REGEX_UNEXPECTED_SUBSEQ_END =
     "Unexpected sequence end, missing '{' opening character";
 
@@ -27,7 +24,19 @@ constexpr std::string_view REGEX_MISSING_ALTERNATIVE =
 constexpr std::string_view REGEX_UNRECOGNIZED_TOKEN =
     "Unrecognized token in pattern (literals must be surrounded by ')";
 
-}  // namespace exception_desc
+constexpr std::string_view SCANNER_UNRECOGNIZED_TOKEN = "Unrecognized token in source";
+
+constexpr std::string_view PARSER_INTEGER_OVERFLOW =
+    "Integer overflow, number must be contained between -2147483648 and +2147483647";
+
+constexpr std::string_view PARSER_FLOAT_OVERFLOW =
+    "Float overflow, number must be contained between -(10^37) and +(10^37)";
+
+constexpr std::string_view PARSER_EXPECTED_TOKEN = "Expected token";
+
+constexpr std::string_view PARSER_UNEXPECTED_TOKEN = "Unexpected token";
+
+}  // namespace error
 }  // namespace sdata
 
 #endif

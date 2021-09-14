@@ -2,13 +2,13 @@
   window {
     width = 1920,
     height = 1080,
-    title = "Tetris game",
-  },
+    title = "Tetris game"
+  }
 
   controls {
     left = 'a',
     right = 'd',
     confirm = 'e',
-    pause = 'p',
-  },
-},
+    pause = 'p'
+  }
+}

@@ -10,14 +10,14 @@
 template <typename char_t>
 bool regex_match(std::basic_string_view<char_t> pattern,
                  std::basic_string_view<char_t> expression) {
-  sdata::Regex<char_t> regex{pattern};
+  sdata::Regex<char_t> regex(pattern);
   return regex.match(expression.begin(), expression.end());
 }
 
 template <typename char_t>
 bool regex_fullmatch(std::basic_string_view<char_t> pattern,
                      std::basic_string_view<char_t> expression) {
-  sdata::Regex<char_t> regex{pattern};
+  sdata::Regex<char_t> regex(pattern);
   return regex.fullmatch(expression.begin(), expression.end());
 }
 
@@ -61,15 +61,6 @@ static std::basic_string<char_t> quoted(std::basic_string_view<char_t> expressio
   return ss.str();
 }
 
-TEST_CASE("sdata::Regex<char> UNKNOWN TOKENS") {
-  REQUIRE_THROWS_AS(regex_match<char>("N", "12"), sdata::RegexParserException<char>);
-  REQUIRE_THROWS_AS(regex_match<char>(")", ")"), sdata::RegexParserException<char>);
-  REQUIRE_THROWS_AS(regex_match<char>("ù", ""), sdata::RegexParserException<char>);
-
-  REQUIRE_THROWS_AS(regex_match<char>("hello world", "hello world"),
-                    sdata::RegexParserException<char>);
-}
-
 TEST_CASE("sdata::Regex<char> LITERAL") {
   SECTION("MINIMAL") {
     CHECK(regex_match<char>("'abc'", "abc"));
@@ -99,33 +90,32 @@ TEST_CASE("sdata::Regex<char> LITERAL") {
 
 TEST_CASE("sdata::Regex<char> CHAR_CLASSES") {
   SECTION("MINIMAL") {
-    CHECK(regex_match<char>("e", "\n"));
+    CHECK(regex_match<char>("_", "\n"));
     CHECK(regex_match<char>("a", "a"));
     CHECK(regex_match<char>("o", "+"));
-    CHECK(regex_match<char>("n", "0"));
+    CHECK(regex_match<char>("d", "0"));
     CHECK(regex_match<char>("Q", "\""));
     CHECK(regex_match<char>("q", "'"));
   }
 
   SECTION("FALSE") {
-    CHECK_FALSE(regex_match<char>("e", "h"));
+    CHECK_FALSE(regex_match<char>("_", "h"));
     CHECK_FALSE(regex_match<char>("a", "1"));
     CHECK_FALSE(regex_match<char>("o", "A"));
-    CHECK_FALSE(regex_match<char>("n", "a"));
+    CHECK_FALSE(regex_match<char>("d", "a"));
     CHECK_FALSE(regex_match<char>("Q", "v"));
     CHECK_FALSE(regex_match<char>("q", "%"));
   }
 
   SECTION("FULLMATCH") {
-    CHECK(regex_fullmatch<char>("aa", "ab"));
-    CHECK_FALSE(regex_fullmatch<char>("e", "\t\t"));
+    CHECK(regex_fullmatch<char>("dd", "01"));
+    CHECK_FALSE(regex_fullmatch<char>("_", "\t\t"));
     CHECK_FALSE(regex_fullmatch<char>("ooo", "+"));
   }
 }
 
 TEST_CASE("sdata::Regex<char> SEQUENCES") {
   SECTION("MINIMAL") {
-    CHECK(regex_match<char>("{}", ""));
     CHECK(regex_match<char>("{'ABC'}", "ABC"));
     CHECK(regex_match<char>("{'AB'} {'CD'}", "ABCD"));
     CHECK(regex_match<char>("{{{{{'a'}}}}}", "a"));
@@ -143,20 +133,22 @@ TEST_CASE("sdata::Regex<char> SEQUENCES") {
 TEST_CASE("sdata::Regex<char> QUANTIFIER +") {
   SECTION("MINIMAL") {
     CHECK(regex_match<char>("{'abc'}+", "abcabc"));
-    CHECK(regex_match<char>("{'ab'n}+", "ab1ab2ab3"));
-    CHECK(regex_match<char>("{n+ o n+ '=' n+}", "12+90=102"));
+    CHECK(regex_match<char>("{'ab'd}+", "ab1ab2ab3"));
+
+    CHECK(regex_match<char>("d+d+", "12"));
+
+    CHECK(regex_match<char>("d+ o d+ '=' d+", "12+90=102"));
     CHECK(regex_match<char>("{{{'hello'}}}+", "hellohello"));
   }
 
   SECTION("FALSE") {
     CHECK_FALSE(regex_match<char>("{'abc'}+", ""));
-    CHECK_FALSE(regex_match<char>("{'ab'n}+", "ab+"));
+    CHECK_FALSE(regex_match<char>("{'ab'd}+", "ab+"));
   }
 
   SECTION("INVALID") {
     REQUIRE_THROWS_AS(regex_match<char>("+", "a"), sdata::RegexParserException<char>);
     REQUIRE_THROWS_AS(regex_match<char>("+++", "a"), sdata::RegexParserException<char>);
-    REQUIRE_THROWS_AS(regex_match<char>("{}+", ""), sdata::RegexParserException<char>);
   }
 }
 
@@ -164,7 +156,7 @@ TEST_CASE("sdata::Regex<char> QUANTIFIER *") {
   SECTION("MINIMAL") {
     CHECK(regex_match<char>("{'abc'}*", "abc"));
     CHECK(regex_match<char>("{'abc'}*", ""));
-    CHECK(regex_match<char>("{'ab'n}*", "ab1ab2ab3"));
+    CHECK(regex_match<char>("{'ab'd}*", "ab1ab2ab3"));
     CHECK(regex_match<char>("{{{'hello'}}}*", ""));
     CHECK(regex_match<char>("{{{'hello'}}}*", "hellohello"));
   }
@@ -172,12 +164,11 @@ TEST_CASE("sdata::Regex<char> QUANTIFIER *") {
   SECTION("INVALID") {
     REQUIRE_THROWS_AS(regex_match<char>("*", "a"), sdata::RegexParserException<char>);
     REQUIRE_THROWS_AS(regex_match<char>("***", "a"), sdata::RegexParserException<char>);
-    REQUIRE_THROWS_AS(regex_match<char>("{}*", ""), sdata::RegexParserException<char>);
   }
 
   SECTION("FULLMATCH") {
     CHECK_FALSE(regex_fullmatch<char>("{'abc'}*", "aaa"));
-    CHECK_FALSE(regex_fullmatch<char>("{'ab'n}*", "ab*"));
+    CHECK_FALSE(regex_fullmatch<char>("{'ab'd}*", "ab*"));
   }
 }
 
@@ -185,29 +176,55 @@ TEST_CASE("sdata::Regex<char> QUANTIFIER ?") {
   SECTION("MINIMAL") {
     CHECK(regex_match<char>("{'abc'}?", "abc"));
     CHECK(regex_match<char>("{'abc'}?", ""));
-    CHECK(regex_match<char>("{'ab'n}?", "ab1"));
+    CHECK(regex_match<char>("{'ab'd}?", "ab1"));
     CHECK(regex_match<char>("{{{'hello'}}}?", ""));
     CHECK(regex_match<char>("{{{'hello'}}}?", "hello"));
-    CHECK(regex_match<char>("n+'.'n+'f'?", "12.95f"));
+    CHECK(regex_match<char>("d+'.'d+ 'f'?", "12.95f"));
   }
 
   SECTION("INVALID") {
     REQUIRE_THROWS_AS(regex_match<char>("?", "a"), sdata::RegexParserException<char>);
     REQUIRE_THROWS_AS(regex_match<char>("???", "a"), sdata::RegexParserException<char>);
-    REQUIRE_THROWS_AS(regex_match<char>("{}?", ""), sdata::RegexParserException<char>);
   }
 
   SECTION("FULLMATCH") {
     CHECK(regex_fullmatch<char>("{'abc'}?", ""));
-    CHECK_FALSE(regex_fullmatch<char>("{'ab'n}?", "ab?"));
+    CHECK_FALSE(regex_fullmatch<char>("{'ab'd}?", "ab?"));
   }
 }
 
-TEST_CASE("sdata::Regex<char> ANY") {
+TEST_CASE("sdata::Regex<char> UNKNOWN TOKENS") {
+  REQUIRE_THROWS_AS(regex_match<char>("N", "12"), sdata::RegexParserException<char>);
+  REQUIRE_THROWS_AS(regex_match<char>(")", ")"), sdata::RegexParserException<char>);
+  REQUIRE_THROWS_AS(regex_match<char>("ù", ""), sdata::RegexParserException<char>);
+  REQUIRE_THROWS_AS(regex_match<char>("hello", "hello"), sdata::RegexParserException<char>);
+}
+
+TEST_CASE("sdata::Regex<char> ALTERNATIVE") {
   SECTION("MINIMAL") {
-    CHECK(regex_match<char>("_", "a"));
-    CHECK(regex_match<char>("_+", quoted(LOREM_IPSUM)));
-    CHECK(regex_match<char>("'//' _* '\n'", "// This is a comment\n"));
+    CHECK(regex_match<char>("'a'|'b'", "a"));
+    CHECK(regex_match<char>("'a'|'b'", "b"));
+
+    CHECK(regex_match<char>("'a' | 'b'", "a"));
+    CHECK(regex_match<char>("'a' | 'b'", "b"));
+
+    CHECK(regex_match<char>("a{a|d}*", "camelCase123"));
+    CHECK(regex_match<char>("a{a|'_'|d}*", "snake_case_var123"));
+  }
+
+  SECTION("INVALID") {
+    REQUIRE_THROWS_AS(regex_match<char>("|", ""), sdata::RegexParserException<char>);
+    REQUIRE_THROWS_AS(regex_match<char>("||", ""), sdata::RegexParserException<char>);
+    REQUIRE_THROWS_AS(regex_match<char>("|||", ""), sdata::RegexParserException<char>);
+    REQUIRE_THROWS_AS(regex_match<char>("'a'|", ""), sdata::RegexParserException<char>);
+    REQUIRE_THROWS_AS(regex_match<char>("|'b'", ""), sdata::RegexParserException<char>);
+    REQUIRE_THROWS_AS(regex_match<char>("|'b'", ""), sdata::RegexParserException<char>);
+  }
+}
+
+TEST_CASE("sdata::Regex<char> UNTIL") {
+  SECTION("MINIMAL") {
+    CHECK(regex_match<char>("'z'$", "abcdefghijklmnopqrstuvwxyz"));
   }
 }
 

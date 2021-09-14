@@ -16,13 +16,13 @@ class RegexParserException : public Exception {
   using string_view_t = std::basic_string_view<char_t>;
 
  public:
-  RegexParserException(std::string_view description, string_view_t pattern,
+  RegexParserException(std::string_view description,
+                       string_view_t pattern,
                        typename string_view_t::iterator token)
       : Exception(description),
         m_pattern(pattern.begin(), pattern.end()),
         m_token(static_cast<char>(*token)),
-        m_index(std::distance(pattern.begin(), token)) {
-  }
+        m_index(std::distance(pattern.begin(), token)) {}
 
   std::string header() const override {
     return format("index: %i, pattern: '%s', token: '%c'", m_index, m_pattern, m_token);
@@ -43,15 +43,14 @@ class RegexParser {
   using string_view_t = std::basic_string_view<char_t>;
 
  public:
-  explicit RegexParser(string_view_t pattern) : m_pattern(pattern) {
-  }
+  explicit RegexParser(string_view_t pattern) : m_pattern(pattern) {}
 
   RegexAutomata<char_t> parse() {
     for (m_token = m_pattern.begin(); m_token != m_pattern.end(); m_token++) {
       parse_token();
     }
 
-    return m_stack.size() > 0 ? compile_sequences() : RegexAutomata<char_t>{};
+    return m_stack.size() > 0 ? compile_sequences() : RegexAutomata<char_t> {};
   }
 
  private:
@@ -60,7 +59,7 @@ class RegexParser {
     auto &automata = m_stack.front();
 
     for (auto itr = m_stack.begin() + 1; itr != m_stack.end(); itr++) {
-      // concatenate sequences inside the automata
+      // merge sequences inside the automata
       ancestor_root_id = automata.merge(*itr, automata.node_leaves(ancestor_root_id));
     }
 
@@ -79,24 +78,15 @@ class RegexParser {
       case REGEX_OPERATOR:
       case REGEX_DIGIT:
       case REGEX_QUOTE:
-      case REGEX_APOSTROPHE:
-        return parse_character_class();
-      case REGEX_ANY:
-        return parse_any();
-      case REGEX_LITERAL:
-        return parse_literal();
-      case REGEX_BEG_SUBSEQ:
-        return parse_subsequence();
-      case REGEX_PLUS:
-        return parse_plus();
-      case REGEX_QUEST:
-        return parse_quest();
-      case REGEX_KLEENE:
-        return parse_kleene();
-      case REGEX_UNTIL:
-        return parse_until();
-      case REGEX_ALTERNATIVE:
-        return parse_alternative();
+      case REGEX_APOSTROPHE: return parse_character_class();
+      case REGEX_ANY: return parse_any();
+      case REGEX_LITERAL: return parse_literal();
+      case REGEX_BEG_SUBSEQ: return parse_subsequence();
+      case REGEX_PLUS: return parse_plus();
+      case REGEX_QUEST: return parse_quest();
+      case REGEX_KLEENE: return parse_kleene();
+      case REGEX_UNTIL: return parse_until();
+      case REGEX_ALTERNATIVE: return parse_alternative();
 
       case REGEX_END_SUBSEQ:
         throw RegexParserException<char_t>(error::REGEX_UNEXPECTED_SUBSEQ_END, m_pattern, m_token);
@@ -107,7 +97,11 @@ class RegexParser {
   }
 
   void parse_character_class() {
-    static const std::unordered_map<RegexCategory, std::string_view> s_character_map{
+    //      -> first_character_alternative
+    // root -> ...
+    //      -> last_character_alternative
+
+    static const std::unordered_map<RegexCategory, std::string_view> s_character_map {
         {REGEX_BLANK, "\n\t\v\b\f "},
         {REGEX_ALPHA, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_"},
         {REGEX_OPERATOR, "!#$%&()*+,-./:;<=>?@[\\]^`{|}~"},
@@ -130,6 +124,8 @@ class RegexParser {
   }
 
   void parse_literal() {
+    // first_character -> ... -> last_character
+
     auto begin = m_token + 1, end = std::find(begin, m_pattern.end(), REGEX_LITERAL);
 
     if (end == m_pattern.end())
@@ -238,6 +234,8 @@ class RegexParser {
   }
 
   void parse_alternative() {
+    // root -> first_alternative
+    //      -> second_alternative
     if (++m_token != m_pattern.end()) {
       parse_token();
     } else {

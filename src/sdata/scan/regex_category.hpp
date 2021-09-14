@@ -13,7 +13,7 @@ enum RegexCategory : char {
   REGEX_QUOTE = 'Q',
   REGEX_APOSTROPHE = 'q',
   REGEX_ANY = '^',
-  
+
   REGEX_LITERAL = '\'',
   REGEX_BEG_SUBSEQ = '{',
   REGEX_END_SUBSEQ = '}',

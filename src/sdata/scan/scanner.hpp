@@ -4,6 +4,7 @@
 #include <deque>
 #include <iterator>
 
+#include "misc/source_location.hpp"
 #include "token.hpp"
 
 namespace sdata {
@@ -13,42 +14,22 @@ class ScannerException : public Exception {
   using string_view_t = std::basic_string_view<char_t>;
 
  public:
-  ScannerException(std::string_view description, string_view_t source,
-                   typename string_view_t::iterator iterator)
-      : Exception(description),
-        m_source(source),
-        m_line(std::count(source.begin(), iterator, '\n')),
-        m_index(std::distance(source.begin(), iterator)),
-        m_snippet(create_snippet(source, m_index)) {
-  }
+  ScannerException(std::string_view description, const Token<char_t> &token)
+      : Exception(description), m_token(token) {}
 
   inline std::string header() const override {
-    return format("\n\t%i | %s\n", m_line, m_snippet.data());
+    std::string snippet = m_token.source_location.snippet();
+    size_t line = m_token.source_location.line();
+
+    return format("\n\t%i | %s\n", line, snippet);
   }
 
-  inline string_view_t source() const {
-    return m_source;
-  }
-
-  inline size_t line() const {
-    return m_line;
-  }
-
-  inline size_t index() const {
-    return m_index;
+  inline virtual std::string_view name() const {
+    return type_to_string<ScannerException<char_t>>();
   }
 
  private:
-  inline static std::string create_snippet(string_view_t source, size_t index) {
-    size_t begin = source.rfind(char_t('\n'), index) + 1;
-    size_t end = source.find(char_t('\n'), index);
-    string_view_t snippet = source.substr(begin, end);
-    return {snippet.begin(), snippet.end()};
-  }
-
-  string_view_t m_source;
-  std::string m_snippet;
-  size_t m_line, m_index;
+  const Token<char_t> &m_token;
 };
 
 template <typename char_t>
@@ -56,26 +37,32 @@ class Scanner {
   using string_view_t = std::basic_string_view<char_t>;
 
  public:
-  explicit Scanner(string_view_t source) : m_source(source), m_iterator(m_source.begin()) {
-  }
+  explicit Scanner(string_view_t source) : m_source(source), m_iterator(m_source.begin()) {}
 
-  inline operator bool() const {
-    return m_iterator != m_source.end();
+  inline bool eof() const {
+    return m_iterator == m_source.end();
   }
 
   Token<char_t> tokenize() {
-    for (const auto &[category, pattern] : Token<char_t>::patterns) {
-      auto [matched, end] = pattern.automata().run(m_iterator, m_source.end());
-      if (matched) {
-        return {
-            {m_iterator, m_iterator = end},
-            category,
-        };
+    using Token = Token<char_t>;
+
+    Token token {{m_source, m_iterator}, "", Token::NONE};
+
+    if (eof()) {
+      return token;
+    }
+
+    for (auto &[category, pattern] : Token::patterns) {
+      if (auto [matched, end] = pattern.automata().run(m_iterator, m_source.end()); matched) {
+        token.category = category;
+        token.expression = {m_iterator, (m_iterator = end)};
       }
     }
 
-    throw ScannerException<char_t>(error::SCANNER_UNRECOGNIZED_TOKEN, m_source, m_iterator);
-    return {{}, Token<char_t>::UNKNOWN};
+    if (token.category == Token::NONE) // token doesn't match any pattern
+      throw ScannerException<char_t>(error::SCANNER_UNRECOGNIZED_TOKEN, token);
+
+    return token.category != Token::EMPTY ? token : tokenize();
   }
 
  private:

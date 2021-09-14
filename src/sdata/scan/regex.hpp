@@ -11,13 +11,8 @@ class Regex {
 
  public:
   Regex(string_view_t pattern) : m_pattern(pattern) {
-    try {
-      RegexParser<char_t> parser(m_pattern);
-      m_automata = parser.parse();
-    } catch (const sdata::RegexParserException<char_t>& exception) {
-      throw exception;
-      return;  // Cancel the regex parsing on error
-    }
+    RegexParser<char_t> parser(m_pattern);
+    m_automata = parser.parse();
   }
 
   template <typename T>
@@ -42,7 +37,7 @@ class Regex {
     return m_pattern;
   }
 
-  inline const RegexAutomata<char_t>& automata() const {
+  inline const RegexAutomata<char_t> &automata() const {
     return m_automata;
   }
 
