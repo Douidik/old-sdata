@@ -1,8 +1,12 @@
 #ifndef SDATA_BITWISE_HPP
 #define SDATA_BITWISE_HPP
 
-#ifndef BIT
-#define BIT(n) (1 << n)
-#endif
+namespace sdata {
+
+constexpr unsigned int bit(unsigned int n) {
+  return 1 << n;
+}
+
+}
 
 #endif

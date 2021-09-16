@@ -4,10 +4,8 @@
 #include <catch2/catch_all.hpp>
 #include <filesystem>
 #include <fstream>
-#include <sdata/scan/scanner.hpp>
+#include <sdata/scanner.hpp>
 #include <streambuf>
-
-#include "catch2/interfaces/catch_interfaces_config.hpp"
 
 TEST_CASE("sdata::Scanner<char> patterns") {
   using namespace std::string_view_literals;
@@ -36,15 +34,6 @@ TEST_CASE("sdata::Scanner<char> patterns") {
     CHECK_FALSE(character_pattern.match("'b"sv));
     CHECK_FALSE(character_pattern.match("b'"sv));
     CHECK_FALSE(character_pattern.match("'hello world'"sv));
-  }
-
-  SECTION("COMMENT") {
-    const auto &comment_pattern = sdata::Token<char>::patterns.at(sdata::Token<char>::COMMENT);
-    CHECK(comment_pattern.match("//comment\n"sv));
-    CHECK(comment_pattern.match("// comment\n"sv));
-    CHECK(comment_pattern.match("// comment"sv));
-    CHECK_FALSE(comment_pattern.match("\"hello"sv));
-    CHECK_FALSE(comment_pattern.match("hello"sv));
   }
 
   SECTION("BOOLEAN") {
@@ -91,7 +80,7 @@ TEST_CASE("sdata::Scanner<char> patterns") {
   }
 
   SECTION("OPERATORS") {
-    CHECK(sdata::Token<char>::patterns.at(sdata::Token<char>::EQUALS).match("="sv));
+    CHECK(sdata::Token<char>::patterns.at(sdata::Token<char>::EQUALS).match(":"sv));
     CHECK(sdata::Token<char>::patterns.at(sdata::Token<char>::BEG_SEQ).match("{"sv));
     CHECK(sdata::Token<char>::patterns.at(sdata::Token<char>::END_SEQ).match("}"sv));
     CHECK(sdata::Token<char>::patterns.at(sdata::Token<char>::SEPARATOR).match(","sv));
@@ -102,10 +91,8 @@ template <typename char_t>
 bool token_matches(
     sdata::Scanner<char_t> &scanner,
     std::pair<std::basic_string_view<char_t>, typename sdata::Token<char_t>::Category> &&expected) {
-  if (scanner.eof()) return false;
-
   auto token = scanner.tokenize();
-  return expected == std::make_pair(token.expression, token.category);
+  return expected.first == token.expression && expected.second == token.category;
 }
 
 template <typename char_t>
@@ -128,19 +115,18 @@ TEST_CASE("sdata::Scanner<char>") {
       REQUIRE(token_matches(scanner, {"{", Token::BEG_SEQ}));
       {
         REQUIRE(token_matches(scanner, {"width", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {"1920", Token::INTEGER}));
         REQUIRE(token_matches(scanner, {",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {"height", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {"1080", Token::INTEGER}));
         REQUIRE(token_matches(scanner, {",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {"title", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {"\"Tetris game\"", Token::STRING}));
-        REQUIRE(token_matches(scanner, {",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {"}", Token::END_SEQ}));
         REQUIRE(token_matches(scanner, {",", Token::SEPARATOR}));
@@ -150,31 +136,28 @@ TEST_CASE("sdata::Scanner<char>") {
       REQUIRE(token_matches(scanner, {"{", Token::BEG_SEQ}));
       {
         REQUIRE(token_matches(scanner, {"left", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {"'a'", Token::CHAR}));
         REQUIRE(token_matches(scanner, {",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {"right", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {"'d'", Token::CHAR}));
         REQUIRE(token_matches(scanner, {",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {"confirm", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {"'e'", Token::CHAR}));
         REQUIRE(token_matches(scanner, {",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {"pause", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {"'p'", Token::CHAR}));
-        REQUIRE(token_matches(scanner, {",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {"}", Token::END_SEQ}));
-        REQUIRE(token_matches(scanner, {",", Token::SEPARATOR}));
       }
 
       REQUIRE(token_matches(scanner, {"}", Token::END_SEQ}));
-      REQUIRE(token_matches(scanner, {",", Token::SEPARATOR}));
     }
   }
 }
@@ -193,27 +176,25 @@ TEST_CASE("sdata::Scanner<char16_t>") {
       REQUIRE(token_matches(scanner, {u"{", Token::BEG_SEQ}));
       {
         REQUIRE(token_matches(scanner, {u"title", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"GAME OVER\"", Token::STRING}));
         REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"play_again_prompt", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"Play again ?\"", Token::STRING}));
         REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"play_again_accept", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"Yes\"", Token::STRING}));
         REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"play_again_refuse", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"No\"", Token::STRING}));
-        REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"}", Token::END_SEQ}));
-        REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
       }
 
       REQUIRE(token_matches(scanner, {u"}", Token::END_SEQ}));
@@ -227,27 +208,24 @@ TEST_CASE("sdata::Scanner<char16_t>") {
       REQUIRE(token_matches(scanner, {u"{", Token::BEG_SEQ}));
       {
         REQUIRE(token_matches(scanner, {u"title", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"Partie terminée\"", Token::STRING}));
         REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"play_again_prompt", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"Souhaitez-vous rejouer ?\"", Token::STRING}));
         REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"play_again_accept", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"Oui\"", Token::STRING}));
         REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"play_again_refuse", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"Non\"", Token::STRING}));
-        REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
-
         REQUIRE(token_matches(scanner, {u"}", Token::END_SEQ}));
-        REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
       }
 
       REQUIRE(token_matches(scanner, {u"}", Token::END_SEQ}));
@@ -261,27 +239,25 @@ TEST_CASE("sdata::Scanner<char16_t>") {
       REQUIRE(token_matches(scanner, {u"{", Token::BEG_SEQ}));
       {
         REQUIRE(token_matches(scanner, {u"title", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"Juego terminado\"", Token::STRING}));
         REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"play_again_prompt", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"Juega de nuevo ?\"", Token::STRING}));
         REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"play_again_accept", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"Sí\"", Token::STRING}));
         REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"play_again_refuse", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"No\"", Token::STRING}));
-        REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"}", Token::END_SEQ}));
-        REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
       }
 
       REQUIRE(token_matches(scanner, {u"}", Token::END_SEQ}));
@@ -295,31 +271,28 @@ TEST_CASE("sdata::Scanner<char16_t>") {
       REQUIRE(token_matches(scanner, {u"{", Token::BEG_SEQ}));
       {
         REQUIRE(token_matches(scanner, {u"title", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"游戏结束\"", Token::STRING}));
         REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"play_again_prompt", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"再玩一次 ？\"", Token::STRING}));
         REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"play_again_accept", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"是的\"", Token::STRING}));
         REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"play_again_refuse", Token::IDENTIFIER}));
-        REQUIRE(token_matches(scanner, {u"=", Token::EQUALS}));
+        REQUIRE(token_matches(scanner, {u":", Token::EQUALS}));
         REQUIRE(token_matches(scanner, {u"\"不\"", Token::STRING}));
-        REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
 
         REQUIRE(token_matches(scanner, {u"}", Token::END_SEQ}));
-        REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
       }
 
       REQUIRE(token_matches(scanner, {u"}", Token::END_SEQ}));
-      REQUIRE(token_matches(scanner, {u",", Token::SEPARATOR}));
     }
   }
 }

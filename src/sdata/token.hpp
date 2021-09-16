@@ -6,7 +6,7 @@
 
 #include "misc/bitwise.hpp"
 #include "misc/source_location.hpp"
-#include "regex.hpp"
+#include "sdata/regex/regex.hpp"
 
 namespace sdata {
 
@@ -17,32 +17,31 @@ struct Token {
   enum Category : unsigned int {
     NONE = 0,
 
-    IDENTIFIER = BIT(0),
-    EQUALS = BIT(1),
-    SEPARATOR = BIT(2),
-    NAMESPACE = BIT(3),
-    COMMENT = BIT(4),
+    IDENTIFIER = bit(0),
+    EQUALS = bit(1),
+    SEPARATOR = bit(2),
+    NAMESPACE = bit(3),
 
-    FLOAT = BIT(5),
-    INTEGER = BIT(6),
-    BOOLEAN = BIT(7),
-    STRING = BIT(8),
-    CHAR = BIT(9),
+    FLOAT = bit(5),
+    INTEGER = bit(6),
+    BOOLEAN = bit(7),
+    STRING = bit(8),
+    CHAR = bit(9),
 
-    BEG_SEQ = BIT(10),
-    END_SEQ = BIT(11),
+    BEG_SEQ = bit(10),
+    END_SEQ = bit(11),
 
-    EMPTY = BIT(12),
+    EMPTY = bit(12),
+
+    CATEGORY_COUNT = 12,
   };
 
-  template <Category category>
-  constexpr std::string_view category_to_string() {
+  constexpr static std::string_view category_to_string(Category category) {
     switch (category) {
       case IDENTIFIER: return "identifier";
       case EQUALS: return "equals";
       case SEPARATOR: return "separator";
       case NAMESPACE: return "namespace";
-      case COMMENT: return "comment";
       case FLOAT: return "float";
       case INTEGER: return "integer";
       case BOOLEAN: return "boolean";
@@ -52,6 +51,7 @@ struct Token {
       case END_SEQ: return "sequence-ending";
       case EMPTY: return "empty";
       case NONE: return "none";
+      case CATEGORY_COUNT: return "category-count";
     }
   }
 
@@ -59,13 +59,12 @@ struct Token {
       {SEPARATOR, {"','"}},
       {END_SEQ, {"'}'"}},
       {BEG_SEQ, {"'{'"}},
-      {EQUALS, {"'='"}},
+      {EQUALS, {"':'"}},
       {IDENTIFIER, {"a {a|d}*"}},
       {NAMESPACE, {"'@' a {a|d}*"}},
       {INTEGER, {"{'-'|'+'}? d+"}},
       {FLOAT, {"{'-'|'+'}? d+ '.' d+ 'f'?"}},
       {BOOLEAN, {"'true'|'false'"}},
-      {COMMENT, {"'//' {'\n'|'\\0'}$"}},
       {CHAR, {"q^q"}},
       {STRING, {"Q Q$"}},
       {EMPTY, {"_+"}},

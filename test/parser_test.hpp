@@ -4,7 +4,7 @@
 #include <catch2/catch_all.hpp>
 #include <fstream>
 #include <memory>
-#include <sdata/parse/parser.hpp>
+#include <sdata/parser.hpp>
 
 template <typename stream_t, typename T, typename = void>
 struct is_streamable : std::false_type {};

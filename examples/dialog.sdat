@@ -1,35 +1,35 @@
 @en_US {
 	game_over_dialog {
-		title = "GAME OVER",
-  	play_again_prompt = "Play again ?",
-  	play_again_accept = "Yes",
-  	play_again_refuse = "No"
+		title : "GAME OVER",
+  	play_again_prompt : "Play again ?",
+  	play_again_accept : "Yes",
+  	play_again_refuse : "No"
   }
 },
 
 @fr_FR {
 	game_over_dialog {
-		title = "Partie terminée",
-  	play_again_prompt = "Souhaitez-vous rejouer ?",
-  	play_again_accept = "Oui",
-  	play_again_refuse = "Non"
+		title : "Partie terminée",
+  	play_again_prompt : "Souhaitez-vous rejouer ?",
+  	play_again_accept : "Oui",
+  	play_again_refuse : "Non"
   }
 },
 
 @es_ES {
 	game_over_dialog {
-		title = "Juego terminado",
-  	play_again_prompt = "Juega de nuevo ?",
-  	play_again_accept = "Sí",
-  	play_again_refuse = "No"
+		title : "Juego terminado",
+  	play_again_prompt : "Juega de nuevo ?",
+  	play_again_accept : "Sí",
+  	play_again_refuse : "No"
   }
 },
 
 @zh_CN {
 	game_over_dialog {
-		title = "游戏结束",
-  	play_again_prompt = "再玩一次 ？",
-  	play_again_accept = "是的",
-  	play_again_refuse = "不"
+		title : "游戏结束",
+  	play_again_prompt : "再玩一次 ？",
+  	play_again_accept : "是的",
+  	play_again_refuse : "不"
   }
 }

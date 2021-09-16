@@ -21,15 +21,15 @@ class ScannerException : public Exception {
     std::string snippet = m_token.source_location.snippet();
     size_t line = m_token.source_location.line();
 
-    return format("\n\t%i | %s\n", line, snippet);
+    return format("\n\t%i | %s\n", line, snippet.data());
   }
 
-  inline virtual std::string_view name() const {
+  inline std::string_view name() const override{
     return type_to_string<ScannerException<char_t>>();
   }
 
  private:
-  const Token<char_t> &m_token;
+  Token<char_t> m_token;
 };
 
 template <typename char_t>
@@ -39,30 +39,25 @@ class Scanner {
  public:
   explicit Scanner(string_view_t source) : m_source(source), m_iterator(m_source.begin()) {}
 
-  inline bool eof() const {
-    return m_iterator == m_source.end();
-  }
-
   Token<char_t> tokenize() {
-    using Token = Token<char_t>;
+    Token<char_t> token {{m_source, m_iterator}, {}, Token<char_t>::NONE};
 
-    Token token {{m_source, m_iterator}, "", Token::NONE};
-
-    if (eof()) {
+    if (m_iterator == m_source.end()) {
       return token;
     }
 
-    for (auto &[category, pattern] : Token::patterns) {
+    for (auto &[category, pattern] : Token<char_t>::patterns) {
       if (auto [matched, end] = pattern.automata().run(m_iterator, m_source.end()); matched) {
         token.category = category;
         token.expression = {m_iterator, (m_iterator = end)};
+        break;
       }
     }
 
-    if (token.category == Token::NONE) // token doesn't match any pattern
+    if (token.category == Token<char_t>::NONE)  // token doesn't match any pattern
       throw ScannerException<char_t>(error::SCANNER_UNRECOGNIZED_TOKEN, token);
 
-    return token.category != Token::EMPTY ? token : tokenize();
+    return token.category != Token<char_t>::EMPTY ? token : tokenize();
   }
 
  private:

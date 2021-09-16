@@ -4,7 +4,7 @@
 #include <catch2/catch_all.hpp>
 #include <iomanip>
 #include <iostream>
-#include <sdata/scan/regex.hpp>
+#include <sdata/regex/regex.hpp>
 #include <string_view>
 
 template <typename char_t>
@@ -22,7 +22,7 @@ bool regex_fullmatch(std::basic_string_view<char_t> pattern,
 }
 
 // one byte wide characters
-constexpr std::string_view LOREM_IPSUM = R"(
+constexpr std::string_view LOREM_IPSUM_LATIN = R"(
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
 Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
@@ -67,7 +67,7 @@ TEST_CASE("sdata::Regex<char> LITERAL") {
     CHECK(regex_match<char>("'abc'", "abcccccccccc"));
     CHECK(regex_match<char>("'hello ' 'world'", "hello world"));
     CHECK(regex_match<char>("'hello\nworld'", "hello\nworld"));
-    CHECK(regex_match<char>(quoted(LOREM_IPSUM), LOREM_IPSUM));
+    CHECK(regex_match<char>(quoted(LOREM_IPSUM_LATIN), LOREM_IPSUM_LATIN));
   }
 
   SECTION("INVALID") {
@@ -79,7 +79,7 @@ TEST_CASE("sdata::Regex<char> LITERAL") {
   SECTION("FALSE") {
     CHECK_FALSE(regex_match<char>("'cba'", "abc"));
     CHECK_FALSE(regex_match<char>("'cbaa'", "aabc"));
-    CHECK_FALSE(regex_match<char>(quoted(LOREM_IPSUM), LOREM_IPSUM.substr(1)));
+    CHECK_FALSE(regex_match<char>(quoted(LOREM_IPSUM_LATIN), LOREM_IPSUM_LATIN.substr(1)));
   }
 
   SECTION("FULLMATCH") {

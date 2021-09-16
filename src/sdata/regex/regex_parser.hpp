@@ -25,7 +25,7 @@ class RegexParserException : public Exception {
         m_index(std::distance(pattern.begin(), token)) {}
 
   std::string header() const override {
-    return format("index: %i, pattern: '%s', token: '%c'", m_index, m_pattern, m_token);
+    return format("index: %i, pattern: '%s', token: '%c'", m_index, m_pattern.data(), m_token);
   }
 
   std::string_view name() const override {

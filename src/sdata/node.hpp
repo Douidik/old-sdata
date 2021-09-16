@@ -10,9 +10,28 @@
 
 namespace sdata {
 
-class Node : std::enable_shared_from_this<Node> {
+class Node;
+
+class NodeException : public Exception {
+ public:
+  NodeException(std::string_view description, std::shared_ptr<Node> node);
+
+  inline std::shared_ptr<Node> node() const {
+    return m_node;
+  }
+
+  inline std::string_view name() const override {
+    return "NodeException";
+  }
+
+ private:
+  std::shared_ptr<Node> m_node;
+};
+
+class Node : public std::enable_shared_from_this<Node> {
  public:
   using variant_t = std::variant<  // clang-format off
+                                 std::nullptr_t,
                                  float,
                                  int,
                                  bool,
@@ -23,7 +42,10 @@ class Node : std::enable_shared_from_this<Node> {
                                  std::u32string, char32_t
                                 >;  // clang-format on
 
-  Node(std::string id, auto data) : m_identifier(id), m_variant(data) {}
+  Node(std::string_view id, auto data, std::unordered_set<std::string_view> context = {})
+      : m_identifier(id),
+        m_variant(data),
+        m_invisible {id.starts_with('@') && context.contains(id)} {}
 
   inline std::string_view id() const {
     return m_identifier;
@@ -58,17 +80,15 @@ class Node : std::enable_shared_from_this<Node> {
 
   std::shared_ptr<Node> add_member(std::shared_ptr<Node> member) {
     member->m_owner = shared_from_this();
-    m_members.insert(member);
-    return member;
+    return m_members.emplace_back(member);
   }
 
-  std::shared_ptr<Node> remove_member(std::shared_ptr<Node> member) {
-    member->m_owner.reset();
-    return m_members.extract(member).value();
-  }
-
-  inline const auto &members() const {
+  inline auto members() const {
     return m_members;
+  }
+
+  inline void merge(std::shared_ptr<Node> other) {
+    m_members.insert(m_members.end(), other->m_members.begin(), other->m_members.end());
   }
 
   inline std::shared_ptr<Node> operator[](std::string_view path) {
@@ -119,7 +139,7 @@ class Node : std::enable_shared_from_this<Node> {
 
       // Force member creation for the non-const version
       if constexpr (!std::is_const_v<node_t>) {
-        auto member = std::make_shared<Node>(step, nullptr);
+        auto member = std::make_shared<Node>(std::string {step}, nullptr);
         node->add_member(member);
         return find<node_t>(member, rest);
       }
@@ -128,10 +148,11 @@ class Node : std::enable_shared_from_this<Node> {
     return nullptr;  // member not found
   }
 
+  bool m_invisible;
   std::string m_identifier;
   variant_t m_variant;
   std::weak_ptr<Node> m_owner;
-  std::unordered_set<std::shared_ptr<Node>> m_members;
+  std::vector<std::shared_ptr<Node>> m_members;
 };
 
 }  // namespace sdata

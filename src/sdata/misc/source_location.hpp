@@ -11,18 +11,17 @@ template <typename char_t>
 class SourceLocation {
   using string_view_t = std::basic_string_view<char_t>;
 
-  constexpr SourceLocation(string_view_t source,
-                           typename string_view_t::const_iterator iterator)
+ public:
+  SourceLocation(string_view_t source, typename string_view_t::const_iterator iterator)
       : m_source(source),
-        m_line {std::count(m_source.cbegin(), iterator, char_t('\n'))},
-        m_index {std::distance(m_source.begin(), iterator)} {}
+        m_line(std::count(m_source.cbegin(), iterator, char_t('\n'))),
+        m_index(std::distance(m_source.cbegin(), iterator)) {}
 
   std::string snippet() const {
-    size_t begin = m_source.rfind(char_t('\n'), m_index);
-    size_t end = m_source.find(char_t('\n'), m_index);
-    auto snippet = m_source.substr(begin, end);
-
-    return {snippet.begin(), snippet.end()};
+    auto begin = m_source.begin() + m_source.rfind(char_t('\n'), m_index) + 1;
+    auto end = m_source.begin() + m_source.find(char_t('\n'), m_index);
+    
+    return {begin, end};
   }
 
   inline size_t index() const {
@@ -36,8 +35,8 @@ class SourceLocation {
   }
 
  private:
-  const string_view_t m_source;
-  const size_t m_index, m_line;
+  string_view_t m_source;
+  size_t m_index, m_line;
 };
 
 }  // namespace sdata

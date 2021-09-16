@@ -3,3 +3,4 @@
 
 #include "regex_test.hpp"
 #include "scanner_test.hpp"
+#include "parser_test.hpp"
