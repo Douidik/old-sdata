@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <variant>
 #include <vector>
+#include <string_view>
 
 #include "misc/exception.hpp"
 

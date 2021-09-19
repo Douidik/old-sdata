@@ -6,22 +6,21 @@
 #include <memory>
 #include <sdata/parser.hpp>
 
-template <typename stream_t, typename T, typename = void>
-struct is_streamable : std::false_type {};
+template <typename T>
+concept streamable = requires(std::ostream os, T x) {
+  {os << x};
+};
 
-template <typename stream_t, typename T>
-struct is_streamable<stream_t,
-                     T,
-                     std::void_t<decltype(std::declval<stream_t &>() << std::declval<T>())>>
-    : std::true_type {};
+template <typename T>
+concept is_string = std::is_same_v<T, std::basic_string<typename T::value_type>>;
 
-template <typename stream_t, typename T>
-constexpr bool is_streamable_v = is_streamable<stream_t, T>();
+template <typename T>
+concept is_char_convertible = requires(T x) {
+  { x } -> std::convertible_to<char>;
+};
 
-void stream_hierarchy(std::ostream &stream,
-                               std::shared_ptr<sdata::Node> node,
-                               size_t depth = 0) {
-  stream << "'" << node->id() << "': ";
+void stream_hierarchy(std::ostream &stream, std::shared_ptr<sdata::Node> node, size_t depth = 0) {
+  stream << "'" << node->id() << "'";
 
   if (!node->members().empty()) {
     stream << '{' << '\n';
@@ -35,10 +34,17 @@ void stream_hierarchy(std::ostream &stream,
     std::visit(
         [&stream](const auto &data) {
           using T = std::decay_t<decltype(data)>;
-          if constexpr (is_streamable_v<std::ostream, T>) {
+
+          stream << " <" << sdata::type_to_string<T>() << ">: ";
+
+          if constexpr (streamable<T>) {
             stream << data;
+          } else if constexpr (is_string<T>) {
+            stream << std::string {data.begin(), data.end()};
+          } else if constexpr (is_char_convertible<T>) {
+            stream << static_cast<char>(data);
           } else {
-            stream << "???";
+            stream << "undefined";
           }
         },
         node->variant());

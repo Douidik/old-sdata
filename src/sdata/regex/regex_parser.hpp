@@ -160,17 +160,13 @@ class RegexParser {
     if (end == m_pattern.end())
       throw RegexParserException<char_t>(error::REGEX_UNTERMINATED_SUBSEQ, m_pattern, m_token);
 
-    auto &subsequence = m_stack.emplace_back();
-
     try {
-      RegexParser<char_t> parser({begin, end});
-      subsequence = parser.parse();
+      m_stack.emplace_back(RegexParser<char_t>({begin, end}).parse());
+      m_token = end;
     } catch (const RegexParserException<char_t> &exception) {
       // Throws the subsequence exception with the completed pattern
       throw RegexParserException<char_t>(exception.description(), m_pattern, m_token);
     }
-
-    m_token = end;
   }
 
   void parse_quest() {
