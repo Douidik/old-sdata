@@ -1,0 +1,11 @@
+---
+BasedOnStyle: Chromium
+ColumnLimit: 100
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: true
+UseTab: Never
+PointerAlignment: Right
+AlignOperands: true
